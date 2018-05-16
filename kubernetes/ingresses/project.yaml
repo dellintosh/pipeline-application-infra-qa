@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  labels:
+    app: pipeline-application
+  name: pipeline-application
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+spec:
+  tls:
+  - hosts:
+      - pipeline-application.qa.example.com
+    secretName: pipeline-application-tls
+  rules:
+  - host: pipeline-application.qa.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: pipeline-application
+          servicePort: 80

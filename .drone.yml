@@ -1,0 +1,64 @@
+pipeline:
+
+  # Generate a kubeconfig file for the given AWS cluster
+  qa-kubectl:
+    image: coinlion/kops
+    commands:
+      - kops export kubecfg qa
+      - kubectl cluster-info
+    environment:
+      - KUBECONFIG=/kube/config
+      - AWS_REGION=us-east-1
+      - KOPS_STATE_STORE=s3://<S3_KOPS_STATE_STORE>
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    volumes:
+      - /kube:/kube
+    when:
+      event: [ push ]
+      branch: [ master ]
+
+  # Retrieve and decrypt the GitHub Hub configuration
+  qa-hubconfig:
+    image: coinlion/kms-vault
+    pull: true
+    environment:
+      - HUB_CONFIG=/config/hub
+      - S3_HUB_CONFIG_BUCKET=<S3_HUB_CONFIG_BUCKET>
+      - AWS_DEFAULT_REGION=us-east-1
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    when:
+      event: [ push ]
+      branch:
+        exclude: [ master ]
+    volumes:
+      - /config:/config
+
+  # Recursively apply the config files under the kubernetes directory
+  qa-deployment:
+    image: coinlion/kops
+    commands:
+      - kubectl apply --recursive -f kubernetes
+    environment:
+      - KUBECONFIG=/kube/config
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    volumes:
+      - /kube:/kube
+    when:
+      event: [ push ]
+      branch: [ master ]
+
+  # Create a pull request to the ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME/qa/production} repo
+  # to update the pipeline deployment configuration.
+  qa-pull-request:
+    image: 277866474112.dkr.ecr.us-east-1.amazonaws.com/infra-production
+    pull: true
+    environment:
+      - HUB_CONFIG=/config/hub
+      - KUBECONFIG=/kube/config
+      - GITHUB_ACTIVE_ACCOUNT=<GITHUB_ACCOUNT>
+    when:
+      event: [ push ]
+      branch: [ master ]
+    volumes:
+      - /config:/config
+      - /kube:/kube
