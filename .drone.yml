@@ -50,7 +50,7 @@ pipeline:
   # Create a pull request to the ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME/qa/production} repo
   # to update the pipeline deployment configuration.
   qa-pull-request:
-    image: 277866474112.dkr.ecr.us-east-1.amazonaws.com/infra-production
+    image: coinlion/infra-production
     pull: true
     environment:
       - HUB_CONFIG=/config/hub
